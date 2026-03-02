@@ -4,7 +4,7 @@ namespace Homework2
 {
     internal class Program
     {
-        const string ProgrammVersionInfo = "Версия 1.0, 17.02.2026";
+        const string ProgrammVersionInfo = "версия 1.0, 17.02.2026";
 
         static void Main(string[] args)
         {
@@ -12,12 +12,17 @@ namespace Homework2
             Console.WriteLine(@"/start /help /info /exit");
             var input = string.Empty;
             var name = string.Empty;
-            var input2 = string.Empty;
 
             while (input != "/exit")
             {
                 input = Console.ReadLine();
-                switch (input)
+                var splitInput = input?.Split(' ');
+                if (splitInput == null || splitInput.Length < 1)
+                {
+                    continue;
+                }
+
+                switch (splitInput[0])
                 {
                     case "/start":
                         //  Запрашиваем имя пользователя.
@@ -27,20 +32,19 @@ namespace Homework2
 
                     case "/help":
                         //  Отображает краткую справочную информацию о том, как пользоваться программой.
-                        Console.WriteLine($"{(string.IsNullOrWhiteSpace(name) ? "Б" : $"{name}, б")}от позволяет вносить данные о времени обучения за сегодня, записывать пройденную тему, смотреть статистику данных о времени занятий.");
+                        Console.WriteLine($"{(string.IsNullOrWhiteSpace(name) ? "Пожалуйста, начните с команды /start." : $"{name}, команда /start запрашивает имя и открывает доступ к команде /echo, команда /help позволяет получить краткую справочную информацию о том, как пользоваться программой, команда /info позволяет получить информацию о версии программы и дате её создания, команда /echo позволяет вывести введенный Вами текст после команды, команда /exit позволяет выйти из меню.")}");
                         break;   
 
                     case "/info":
                         //  Предоставляет информацию о версии программы и дате её создания.
-                        Console.WriteLine(ProgrammVersionInfo);
+                        Console.WriteLine($"{(string.IsNullOrWhiteSpace(name) ? "Пожалуйста, начните с команды /start." : $"{name}, версия и дата создания: {ProgrammVersionInfo}")}");
                         break;
 
                     case "/echo":
                         //  После ввода имени становится доступной команда /echo.
                         //  При вводе этой команды с аргументом (например, /echo Hello), программа возвращает введенный текст (в данном примере "Hello").
-                        input2 = Console.ReadLine();
-                        Console.WriteLine(input2);
-                        break;
+                        Console.WriteLine($"{(string.IsNullOrWhiteSpace(name) ? "Пожалуйста, начните с команды /start." : $"{string.Join(' ', splitInput[1..])}")}");
+                       break;
 
                     case "/exit":
                         break;
