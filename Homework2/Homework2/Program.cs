@@ -66,10 +66,23 @@ namespace Homework2
                         break;
 
                     case "/addtask":
-                        Console.WriteLine("Пожалуйста, введите описание задачи:");
-                        var task = Console.ReadLine();
-                        tasks.Add(task);
-                        Console.WriteLine($"Задача {task} добавлена.");
+                        bool isValid = false;
+                        do
+                        {
+                            Console.WriteLine("Пожалуйста, введите описание задачи:");
+                            var task = Console.ReadLine();
+                            if (string.IsNullOrWhiteSpace(task))
+                            {
+                                Console.WriteLine("Вы не ввели описание задачи.");
+                                continue;
+                            }
+                            else
+                            {
+                                isValid = true;
+                                tasks.Add(task);
+                                Console.WriteLine($"Задача {task} добавлена.");
+                            }
+                        } while (!isValid);
                         break;
 
                     case "/showtasks":
