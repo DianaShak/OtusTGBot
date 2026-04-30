@@ -1,31 +1,23 @@
-﻿using Otus.ToDoList.ConsoleBot;
-using Otus.ToDoList.ConsoleBot.Types;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-namespace Homework2
+﻿namespace Homework2
 {
     public class UserService : IUserService
     {
-        private readonly Dictionary<long, ToDoUser> _users = new();
+        private readonly IUserRepository _userRepository;
+
+        public UserService(IUserRepository userRepository)
+        {
+            _userRepository = userRepository;
+        }
 
         public ToDoUser? GetUser(long telegramUserId)
         {
-            if (_users.TryGetValue(telegramUserId, out var user))
-            {  
-                return user;
-            }
-            else
-            {
-                return null;
-            }
+            return _userRepository.GetUserByTelegramUserId(telegramUserId);
         }
 
         public ToDoUser RegisterUser(long telegramUserId, string telegramUserName)
         {
             ToDoUser user = new(telegramUserName, telegramUserId);
-            _users.Add(telegramUserId, user);
+            _userRepository.Add(user);
             return user;
         }
     }

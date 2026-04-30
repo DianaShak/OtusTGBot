@@ -1,13 +1,8 @@
 ﻿using Otus.ToDoList.ConsoleBot;
 using Otus.ToDoList.ConsoleBot.Types;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Mail;
-using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 
 
 namespace Homework2
@@ -19,11 +14,13 @@ namespace Homework2
         private readonly ToDoUser user;
         private readonly IUserService _userService;
         private readonly IToDoService _toDoService;
+        private readonly IToDoReportService _toDoReportService;
 
-        public UpdateHandler(IUserService userService, IToDoService toDoService)
+        public UpdateHandler(IUserService userService, IToDoService toDoService, IToDoReportService toDoReportService)
         {
             _userService = userService;
             _toDoService = toDoService;
+            _toDoReportService = toDoReportService;
         }
 
         public void HandleUpdateAsync(ITelegramBotClient botClient, Update update)
@@ -130,7 +127,7 @@ namespace Homework2
                                 if (indexToRemove >= 0 && indexToRemove < tasks.Count)
                                 {
                                     var taskToRemove = tasks[taskNumber - 1];
-                                    _toDoService.Delete(user.UserId, taskToRemove.Id);
+                                    _toDoService.Delete(taskToRemove.Id);
                                     botClient.SendMessage(update.Message.Chat, $"Задача '{taskToRemove.Name}' удалена.");
                                 }
                                 else
@@ -156,7 +153,7 @@ namespace Homework2
                             Validator.ValidateString(idToFind);
                             if (Guid.TryParse(idToFind, out Guid idSearch))
                             {
-                                _toDoService.MarkCompleted(user.UserId, idSearch);
+                                _toDoService.MarkCompleted(idSearch);
                                 botClient.SendMessage(update.Message.Chat, "Задача завершена.");
                             }
                         }
@@ -181,6 +178,39 @@ namespace Homework2
                             }
                             botClient.SendMessage(update.Message.Chat, message);
                         }
+                        break;
+
+                    case "/find":
+                        //Добавить обработку новой команды / find.
+                        //Пример команды: / find Имя
+                        //Вывод в консоль должен быть как в / showtask
+                        if (user != null)
+                        {
+                            var taskToFind = string.Join(' ', splitInput[1..]);
+                            var tasks = _toDoService.Find(user, taskToFind);
+                            string message = "Задач нет.";
+                            if (tasks.Count > 0)
+                            {
+                                var sb = new StringBuilder();
+                                foreach (var task in tasks)
+                                {
+                                    sb.AppendFormat("{0} - {1} - {2}\n", task.Name, task.CreatedAt, task.Id);
+                                }
+                                message = sb.ToString();
+                            }
+                            botClient.SendMessage(update.Message.Chat, message);
+
+                        }
+                        break;
+
+                    case "/report":
+                        var (total, completed, active, generatedAt) = _toDoReportService.GetUserStats(user.UserId);
+                        botClient.SendMessage(
+                        update.Message.Chat, 
+                        $"Статистика по задачам на {generatedAt}." +
+                        $"Всего: {total}; Завершенных: {completed}; " +
+                        $"Активных: {active};"
+                        );
                         break;
 
                     case "/exit":
@@ -231,6 +261,8 @@ namespace Homework2
                 $"\nкоманда /showtasks выводит список введенных задач со статусом Active, " +
                 $"\nкоманда /showalltasks выводит список всех введенных задач, " +
                 $"\nкоманда /removetask позволяет удалить определенную задачу," +
+                $"\nкоманда /report позволяет узнать статистику по задачам," +
+                $"\nкоманда /find позволяет найти все задачи, начинающиеся с введенного слова," +
                 $"\nкоманда /exit позволяет выйти из меню.");
         }
     }

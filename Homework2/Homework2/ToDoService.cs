@@ -1,29 +1,25 @@
-﻿using Otus.ToDoList.ConsoleBot.Types;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Homework2
 {
     internal class ToDoService : IToDoService
     {
         public const int TaskCountLimitMin = 1;
-        public const int TaskCountLimitMax = 2;
+        public const int TaskCountLimitMax = 100;
         public const int TaskLengthLimitMin = 1;
-        public const int TaskLengthLimitMax = 2;
+        public const int TaskLengthLimitMax = 100;
 
-        private readonly Dictionary<Guid, List<ToDoItem>> _items = new();
-
+        private readonly IToDoRepository _toDoRepository;
         private int _taskCountLimitMin;
         private int _taskCountLimitMax;
         private int _taskLengthLimitMin;
         private int _taskLengthLimitMax;
 
 
-        public ToDoService(int taskCountLimitMin, int taskCountLimitMax, int taskLengthLimitMin, int taskLengthLimitMax)
+        public ToDoService(IToDoRepository toDoRepository, int taskCountLimitMin, int taskCountLimitMax, int taskLengthLimitMin, int taskLengthLimitMax)
         {
+            _toDoRepository = toDoRepository;
             _taskCountLimitMin = taskCountLimitMin;
             _taskCountLimitMax = taskCountLimitMax;
             _taskLengthLimitMin = taskLengthLimitMin;
@@ -32,85 +28,58 @@ namespace Homework2
 
         public ToDoItem Add(ToDoUser user, string name)
         {
-            if (!_items.TryGetValue(user.UserId, out var list))
+            if (_toDoRepository.ExistsByName(user.UserId, name))
             {
-                list = new List<ToDoItem>();
-                //_items.Add(user.UserId, newList);
-                _items[user.UserId] = list;
+                throw new DuplicateTaskException(name);
             }
 
-            if (list.Count >= _taskCountLimitMax)
+            if (_toDoRepository.CountActive(user.UserId) >= _taskCountLimitMax)
             {
                 throw new TaskCountLimitException(_taskCountLimitMax);
             }
 
             Validator.ValidateString(name);
-            bool alreadyExist = list.Any(t => t.Name == name);
 
             if (name.Length < _taskLengthLimitMin || name.Length > _taskLengthLimitMax)
             {
                 throw new TaskLengthLimitException(name.Length, _taskLengthLimitMin);
             }
 
-            if (alreadyExist)
-            {
-                throw new DuplicateTaskException(name);
-            }
-            ToDoItem newItem = new(user, name);
-            list.Add(newItem);
-            return newItem;
-
+            ToDoItem newAddItem = new(user, name);
+            _toDoRepository.Add(newAddItem);
+            return newAddItem;
         }
 
-        public void Delete(Guid userId, Guid taskId)
+        public void Delete(Guid taskId)
         {
-            //Ищем по id пользователя, из его листа тасков удаляем нужную.
-            if (!_items.TryGetValue(userId, out var list) || list.Count <= 0)
-            {
-                throw new ArgumentException(nameof(userId), "Задач пока нет.");
-            }
+            _toDoRepository.Delete(taskId);
+        }
 
-            var foundTask = list.First(t => t.Id == taskId);
-            list.Remove(foundTask);
+        public IReadOnlyList<ToDoItem> Find(ToDoUser user, string namePrefix)
+        {
+            return _toDoRepository.Find(user.UserId, i => i.Name.StartsWith(namePrefix));
         }
 
         public IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId)
         {
-            if (_items.TryGetValue(userId, out var list))
-            {
-                return list.Where(item => item.State == ToDoItemState.Active).ToList();
-            }
-            else
-            {
-                return new List<ToDoItem>();
-            }
+            return _toDoRepository.GetActiveByUserId(userId);
         }
 
         public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId)
         {
-            if (_items.TryGetValue(userId, out var list))
-            {
-                return list;
-            }
-            else
-            {
-                return new List<ToDoItem>();
-            }
+            return _toDoRepository.GetAllByUserId(userId);
         }
 
-        public void MarkCompleted(Guid userId, Guid taskId)
+        public void MarkCompleted(Guid taskId)
         {
-            if (!_items.TryGetValue(userId, out var list))
+            var foundTask = _toDoRepository.Get(taskId);
+            if (foundTask == null)
             {
-                return;
+                throw new Exception($"Задача {taskId} не найдена.");
             }
-
-            var foundItem = list.FirstOrDefault(item => item.Id == taskId);
-            if (foundItem != null)
-            {
-                foundItem.State = ToDoItemState.Completed;
-                foundItem.StateChangedAt = DateTime.UtcNow;
-            }
+            foundTask.State = ToDoItemState.Completed;
+            foundTask.StateChangedAt = DateTime.UtcNow;
+            _toDoRepository.Update(foundTask);
         }
     }
 }

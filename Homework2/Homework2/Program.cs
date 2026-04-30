@@ -12,13 +12,18 @@ namespace Homework2
         {
             try
             {
+                var toDoRepository = new InMemoryToDoRepository();
+                var userRepository = new InMemoryUserRepository();
                 var toDoService = new ToDoService(
+                    toDoRepository,
                     ToDoService.TaskCountLimitMin,
                     ToDoService.TaskCountLimitMax,
                     ToDoService.TaskLengthLimitMin,
                     ToDoService.TaskLengthLimitMax
                     );
-                var handler = new UpdateHandler(new UserService(), toDoService);
+                var toDoReportService = new ToDoReportService(toDoRepository, userRepository);
+                var userService = new UserService(userRepository);
+                var handler = new UpdateHandler(userService, toDoService, toDoReportService);
                 var botClient = new ConsoleBotClient();
                 botClient.StartReceiving(handler);
             }
