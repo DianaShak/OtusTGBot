@@ -1,6 +1,7 @@
 ﻿using Otus.ToDoList.ConsoleBot;
 using Otus.ToDoList.ConsoleBot.Types;
 using System;
+using System.Threading;
 
 namespace Homework2
 {
@@ -12,6 +13,9 @@ namespace Homework2
         {
             try
             {
+                CancellationTokenSource cts = new CancellationTokenSource();
+                //CancellationToken token = cts.Token;
+                
                 var toDoRepository = new InMemoryToDoRepository();
                 var userRepository = new InMemoryUserRepository();
                 var toDoService = new ToDoService(
@@ -25,7 +29,7 @@ namespace Homework2
                 var userService = new UserService(userRepository);
                 var handler = new UpdateHandler(userService, toDoService, toDoReportService);
                 var botClient = new ConsoleBotClient();
-                botClient.StartReceiving(handler);
+                botClient.StartReceiving(handler, cts.Token);
             }
             catch (Exception exp)
             {

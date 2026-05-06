@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Homework2
 {
@@ -26,14 +28,14 @@ namespace Homework2
             _taskLengthLimitMax = taskLengthLimitMax;
         }
 
-        public ToDoItem Add(ToDoUser user, string name)
+        public async Task<ToDoItem> Add(ToDoUser user, string name, CancellationToken ct)
         {
-            if (_toDoRepository.ExistsByName(user.UserId, name))
+            if (await _toDoRepository.ExistsByName(user.UserId, name, ct))
             {
                 throw new DuplicateTaskException(name);
             }
 
-            if (_toDoRepository.CountActive(user.UserId) >= _taskCountLimitMax)
+            if (await _toDoRepository.CountActive(user.UserId, ct) >= _taskCountLimitMax)
             {
                 throw new TaskCountLimitException(_taskCountLimitMax);
             }
@@ -46,40 +48,45 @@ namespace Homework2
             }
 
             ToDoItem newAddItem = new(user, name);
-            _toDoRepository.Add(newAddItem);
+            await _toDoRepository.Add(newAddItem, ct);
             return newAddItem;
         }
 
-        public void Delete(Guid taskId)
+        public async Task Delete(Guid taskId, CancellationToken ct)
         {
-            _toDoRepository.Delete(taskId);
+            await _toDoRepository.Delete(taskId, ct);
+            return;
         }
 
-        public IReadOnlyList<ToDoItem> Find(ToDoUser user, string namePrefix)
+        public async Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix, CancellationToken ct)
         {
-            return _toDoRepository.Find(user.UserId, i => i.Name.StartsWith(namePrefix));
+            var foundedTask = await _toDoRepository.Find(user.UserId, i => i.Name.StartsWith(namePrefix), ct);
+            return foundedTask;
         }
 
-        public IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId)
+        public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId, CancellationToken ct)
         {
-            return _toDoRepository.GetActiveByUserId(userId);
+            var list = await _toDoRepository.GetActiveByUserId(userId, ct);
+            return list;
         }
 
-        public IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId)
+        public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId, CancellationToken ct)
         {
-            return _toDoRepository.GetAllByUserId(userId);
+            var list = await _toDoRepository.GetAllByUserId(userId, ct);
+            return list;
         }
 
-        public void MarkCompleted(Guid taskId)
+        public async Task MarkCompleted(Guid taskId, CancellationToken ct)
         {
-            var foundTask = _toDoRepository.Get(taskId);
+            var foundTask = await _toDoRepository.Get(taskId, ct);
             if (foundTask == null)
             {
                 throw new Exception($"Задача {taskId} не найдена.");
             }
             foundTask.State = ToDoItemState.Completed;
             foundTask.StateChangedAt = DateTime.UtcNow;
-            _toDoRepository.Update(foundTask);
+            await _toDoRepository.Update(foundTask, ct);
+            return;
         }
     }
 }

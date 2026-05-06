@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
@@ -12,21 +13,23 @@ namespace Homework2
     {
         private List<ToDoUser> _userRepo = new();
 
-        public void Add(ToDoUser user)
+        public async Task Add(ToDoUser user, CancellationToken ct)
         {
             _userRepo.Add(user);
+            return;
         }
 
-        public ToDoUser? GetUser(Guid userId)
+        public async Task<ToDoUser?> GetUser(Guid userId, CancellationToken ct)
         {
             var foundUser = _userRepo.FirstOrDefault(item => item.UserId == userId);
             return foundUser;
         }
 
-        public ToDoUser? GetUserByTelegramUserId(long telegramUserId)
+        public async Task<ToDoUser?> GetUserByTelegramUserId(long telegramUserId, CancellationToken ct)
         {
             var foundUser = _userRepo.FirstOrDefault(item => item.TelegramUserId == telegramUserId);
             return foundUser;
+
         }
     }
 }

@@ -18,7 +18,7 @@ namespace Homework2
             telegramUserName = TelegramUserName;
             RegisteredAt = DateTime.UtcNow;
             UserId = Guid.NewGuid();
-            TelegramUserId = telegramUserId;
+            telegramUserId = TelegramUserId;
         }
     }
 }

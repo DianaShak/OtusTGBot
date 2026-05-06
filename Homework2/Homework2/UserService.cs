@@ -1,4 +1,7 @@
-﻿namespace Homework2
+﻿using System.Threading;
+using System.Threading.Tasks;
+
+namespace Homework2
 {
     public class UserService : IUserService
     {
@@ -9,12 +12,13 @@
             _userRepository = userRepository;
         }
 
-        public ToDoUser? GetUser(long telegramUserId)
+        public async Task<ToDoUser?> GetUser(long telegramUserId, CancellationToken ct)
         {
-            return _userRepository.GetUserByTelegramUserId(telegramUserId);
+            var foundedUser = _userRepository.GetUserByTelegramUserId(telegramUserId);
+            return foundedUser;
         }
 
-        public ToDoUser RegisterUser(long telegramUserId, string telegramUserName)
+        public async Task<ToDoUser> RegisterUser(long telegramUserId, string telegramUserName, CancellationToken ct)
         {
             ToDoUser user = new(telegramUserName, telegramUserId);
             _userRepository.Add(user);

@@ -2,20 +2,21 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Homework2
 {
     public interface IToDoService
     {
-        IReadOnlyList<ToDoItem> GetAllByUserId(Guid userId);
+        Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId, CancellationToken ct);
         //Возвращает ToDoItem для UserId со статусом Active
-        IReadOnlyList<ToDoItem> GetActiveByUserId(Guid userId);
+        Task<IReadOnlyList<ToDoItem>> GetActiveByUserId(Guid userId, CancellationToken ct);
 
-        IReadOnlyList<ToDoItem> Find(ToDoUser user, string namePrefix);
+        Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix, CancellationToken ct);
 
-        ToDoItem Add(ToDoUser user, string name);
-        void MarkCompleted(Guid taskId);
-        void Delete(Guid taskId);
+        Task<ToDoItem> Add(ToDoUser user, string name, CancellationToken ct);
+        Task MarkCompleted(Guid taskId, CancellationToken ct);
+        Task Delete(Guid taskId, CancellationToken ct);
     }
 }

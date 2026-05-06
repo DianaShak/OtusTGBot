@@ -2,6 +2,7 @@
 using Otus.ToDoList.ConsoleBot.Types;
 using System;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 
@@ -10,8 +11,6 @@ namespace Homework2
 
     public class UpdateHandler : IUpdateHandler
     {
-
-        private readonly ToDoUser user;
         private readonly IUserService _userService;
         private readonly IToDoService _toDoService;
         private readonly IToDoReportService _toDoReportService;
@@ -22,16 +21,16 @@ namespace Homework2
             _toDoService = toDoService;
             _toDoReportService = toDoReportService;
         }
-
-        public void HandleUpdateAsync(ITelegramBotClient botClient, Update update)
+       
+        public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
         {
             try
             {
                 var splitInput = update.Message.Text?.Split(' ');
-                var user = _userService.GetUser(update.Message.From.Id);
+                var user = await _userService.GetUser(update.Message.From.Id, ct);
                 if (user == null && splitInput[0] != "/start")
                 {
-                    botClient.SendMessage(update.Message.Chat, "Вы не зарегистрированы, Вам доступны команды /help, /info и /start для регистрации.");
+                    await botClient.SendMessage(update.Message.Chat, "Вы не зарегистрированы, Вам доступны команды /help, /info и /start для регистрации.", ct);
                 }
 
                 /*//string taskLength = string.Empty;
@@ -53,10 +52,11 @@ namespace Homework2
 
                 if (splitInput == null || splitInput.Length < 1)
                 {
-                    botClient.SendMessage(update.Message.Chat,
+                    await botClient.SendMessage(update.Message.Chat,
                         "Такой команды нет. Пожалуйста, введите команду из предложенных:"
                         + Environment.NewLine
-                        + @"/start /help /info /addtask /showtasks /removetask /exit");
+                        + @"/start /help /info /addtask /showtasks /removetask /exit",
+                        ct);
                     return;
                 }
 
@@ -65,80 +65,43 @@ namespace Homework2
                     case "/start":
                         if (user == null)
                         {
-                            _userService.RegisterUser(update.Message.From.Id, update.Message.From.Username);
-                            botClient.SendMessage(update.Message.Chat, "Выберите нужную команду!");
-                            botClient.SendMessage(update.Message.Chat, @"/start /help /info /addtask /completetask /showtasks /showalltasks /removetask /exit");
+                            await _userService.RegisterUser(update.Message.From.Id, update.Message.From.Username, ct);
+                            await botClient.SendMessage(update.Message.Chat, "Выберите нужную команду!", ct);
+                            await botClient.SendMessage(update.Message.Chat, @"/start /help /info /addtask /completetask /showtasks /showalltasks /removetask /exit", ct);
                         }
                         //var userName = GetNameMethod(botClient, update.Message.Chat);
                         //user = new ToDoUser(userName, 0);  //  1 пункт
-                        botClient.SendMessage(update.Message.Chat, $"Здравствуйте, {update.Message.From.Username}! Чем я могу помочь?");
-
+                        await botClient.SendMessage(update.Message.Chat, $"Здравствуйте, {update.Message.From.Username}! Чем я могу помочь?", ct);
                         break;
 
                     case "/help":
                         //  Отображает краткую справочную информацию о том, как пользоваться программой.
-                        HelpMethod(botClient, update.Message.Chat, update.Message.From);
+                        HelpMethod(botClient, update.Message.Chat, update.Message.From, ct);
                         break;
 
                     case "/info":
                         //  Предоставляет информацию о версии программы и дате её создания.
-                        InfoMethod(botClient, update.Message.Chat, update.Message.From);
+                        InfoMethod(botClient, update.Message.Chat, update.Message.From, ct);
                         break;
 
                     case "/addtask":
                         if (user != null)
                         {
-                            var taskToAdd = string.Join(' ', splitInput[1..]);
-                            //var taskToAdd = update.Message.Text.Substring();
-                            _toDoService.Add(user, taskToAdd);
-                            botClient.SendMessage(update.Message.Chat, $"Задача '{taskToAdd}' добавлена.");
+                            await AddTask(botClient, update, splitInput, user, ct);
                         }
                         break;
 
                     case "/showtasks":
                         if (user != null)
                         {
-                            var tasks = _toDoService.GetActiveByUserId(user.UserId);
-                            string message = "Задач нет.";
-                            if (tasks.Count > 0)
-                            {
-                                var sb = new StringBuilder();
-                                foreach (var task in tasks)
-                                {
-                                    sb.AppendFormat("{0} - {1} - {2}\n", task.Name, task.CreatedAt, task.Id);
-                                }
-                                message = sb.ToString();
-                            }
-                            botClient.SendMessage(update.Message.Chat, message);
+                            await ShowTasks(botClient, update, user, ct);
                         }
                         break;
 
                     case "/removetask":
                         if (user != null)
                         {
-                            var taskNumberToRemove = string.Join(' ', splitInput[1..]);
-                            var taskNumber = Validator.ParseAndValidateInt(taskNumberToRemove, ToDoService.TaskCountLimitMin, ToDoService.TaskCountLimitMax);
-                            var tasks = _toDoService.GetAllByUserId(user.UserId);
-
-                            if (tasks.Count > 0)
-                            {
-                                int indexToRemove = taskNumber - 1;
-
-                                if (indexToRemove >= 0 && indexToRemove < tasks.Count)
-                                {
-                                    var taskToRemove = tasks[taskNumber - 1];
-                                    _toDoService.Delete(taskToRemove.Id);
-                                    botClient.SendMessage(update.Message.Chat, $"Задача '{taskToRemove.Name}' удалена.");
-                                }
-                                else
-                                {
-                                    botClient.SendMessage(update.Message.Chat, "Элемент с таким номером не существует. Пожалуйста, введите корректный номер.");
-                                }
-                            }
-                            else
-                            {
-                                botClient.SendMessage(update.Message.Chat, "Список пуст.");
-                            }
+                            await RemoveTask(botClient, update, splitInput, user, ct);
                         }
                         break;
 
@@ -149,13 +112,7 @@ namespace Homework2
                         //Пример: / completetask 73c7940a - ca8c - 4327 - 8a15 - 9119bffd1d5e
                         if (user != null)
                         {
-                            var idToFind = string.Join(' ', splitInput[1..]);
-                            Validator.ValidateString(idToFind);
-                            if (Guid.TryParse(idToFind, out Guid idSearch))
-                            {
-                                _toDoService.MarkCompleted(idSearch);
-                                botClient.SendMessage(update.Message.Chat, "Задача завершена.");
-                            }
+                            await CompleteTask(botClient, update, splitInput, user, ct);
                         }
                         break;
 
@@ -165,18 +122,7 @@ namespace Homework2
                         //ShowAllTasks(tasks, true, botClient, update.Message.Chat);
                         if (user != null)
                         {
-                            var tasks = _toDoService.GetAllByUserId(user.UserId);
-                            string message = "Задач нет.";
-                            if (tasks.Count > 0)
-                            {
-                                var sb = new StringBuilder();
-                                foreach (var task in tasks)
-                                {
-                                    sb.AppendFormat("({0}) {1} - {2} - {3}\n", task.State, task.Name, task.CreatedAt, task.Id);
-                                }
-                                message = sb.ToString();
-                            }
-                            botClient.SendMessage(update.Message.Chat, message);
+                            await ShowAllTasks(botClient, update, user, ct);
                         }
                         break;
 
@@ -186,31 +132,16 @@ namespace Homework2
                         //Вывод в консоль должен быть как в / showtask
                         if (user != null)
                         {
-                            var taskToFind = string.Join(' ', splitInput[1..]);
-                            var tasks = _toDoService.Find(user, taskToFind);
-                            string message = "Задач нет.";
-                            if (tasks.Count > 0)
-                            {
-                                var sb = new StringBuilder();
-                                foreach (var task in tasks)
-                                {
-                                    sb.AppendFormat("{0} - {1} - {2}\n", task.Name, task.CreatedAt, task.Id);
-                                }
-                                message = sb.ToString();
-                            }
-                            botClient.SendMessage(update.Message.Chat, message);
+                            await Find(botClient, update, splitInput, user, ct);
 
                         }
                         break;
 
                     case "/report":
-                        var (total, completed, active, generatedAt) = _toDoReportService.GetUserStats(user.UserId);
-                        botClient.SendMessage(
-                        update.Message.Chat, 
-                        $"Статистика по задачам на {generatedAt}." +
-                        $"Всего: {total}; Завершенных: {completed}; " +
-                        $"Активных: {active};"
-                        );
+                        if (user != null)
+                        {
+                            await ShowReport(botClient, update, user, ct);
+                        }
                         break;
 
                     case "/exit":
@@ -224,32 +155,115 @@ namespace Homework2
             }
             catch (TaskCountLimitException e)
             {
-                botClient.SendMessage(update.Message.Chat, $"Исключение: {e.Message}");
+                await botClient.SendMessage(update.Message.Chat, $"Исключение: {e.Message}", ct);
             }
             catch (TaskLengthLimitException e)
             {
-                botClient.SendMessage(update.Message.Chat, $"Исключение: {e.Message}");
+                await botClient.SendMessage(update.Message.Chat, $"Исключение: {e.Message}", ct);
             }
             catch (DuplicateTaskException e)
             {
-                botClient.SendMessage(update.Message.Chat, $"Исключение: {e.Message}");
+                await botClient.SendMessage(update.Message.Chat, $"Исключение: {e.Message}", ct);
             }
             catch (ArgumentException e)
             {
-                botClient.SendMessage(update.Message.Chat, $"Ошибка: {e.Message}");
+                await botClient.SendMessage(update.Message.Chat, $"Ошибка: {e.Message}", ct);
+            }
+
+            async Task Find(ITelegramBotClient botClient, Update update, string[] splitInput, ToDoUser? user, CancellationToken ct)
+            {
+                var taskToFind = string.Join(' ', splitInput[1..]);
+                var tasks = await _toDoService.Find(user, taskToFind, ct);
+                string message = "Задач нет.";
+                if (tasks.Count > 0)
+                {
+                    var sb = new StringBuilder();
+                    foreach (var task in tasks)
+                    {
+                        sb.AppendFormat("{0} - {1} - {2}\n", task.Name, task.CreatedAt, task.Id);
+                    }
+                    message = sb.ToString();
+                }
+                await botClient.SendMessage(update.Message.Chat, message, ct);
             }
         }
 
-        private void InfoMethod(ITelegramBotClient botClient, Chat chat, User user)
+        private async Task AddTask(ITelegramBotClient botClient, Update update, string[] splitInput, ToDoUser? user, CancellationToken ct)
+        {
+            var taskToAdd = string.Join(' ', splitInput[1..]);
+            //var taskToAdd = update.Message.Text.Substring();
+            await _toDoService.Add(user, taskToAdd, ct);
+            await botClient.SendMessage(update.Message.Chat, $"Задача '{taskToAdd}' добавлена.", ct);
+        }
+
+        private async Task ShowTasks(ITelegramBotClient botClient, Update update, ToDoUser? user, CancellationToken ct)
+        {
+            var tasks = await _toDoService.GetActiveByUserId(user.UserId, ct);
+            string message = "Задач нет.";
+            if (tasks.Count > 0)
+            {
+                var sb = new StringBuilder();
+                foreach (var task in tasks)
+                {
+                    sb.AppendFormat("{0} - {1} - {2}\n", task.Name, task.CreatedAt, task.Id);
+                }
+                message = sb.ToString();
+            }
+            await botClient.SendMessage(update.Message.Chat, message, ct);
+        }
+
+        private async Task RemoveTask(ITelegramBotClient botClient, Update update, string[] splitInput, ToDoUser? user, CancellationToken ct)
+        {
+            var taskNumberToRemove = string.Join(' ', splitInput[1..]);
+            var taskNumber = Validator.ParseAndValidateInt(taskNumberToRemove, ToDoService.TaskCountLimitMin, ToDoService.TaskCountLimitMax);
+            var tasks = await _toDoService.GetAllByUserId(user.UserId, ct);
+
+            if (tasks.Count > 0)
+            {
+                int indexToRemove = taskNumber - 1;
+
+                if (indexToRemove >= 0 && indexToRemove < tasks.Count)
+                {
+                    var taskToRemove = tasks[taskNumber - 1];
+                    await _toDoService.Delete(taskToRemove.Id, ct);
+                    await botClient.SendMessage(update.Message.Chat, $"Задача '{taskToRemove.Name}' удалена.", ct);
+                }
+                else
+                {
+                    await botClient.SendMessage(update.Message.Chat, "Элемент с таким номером не существует. Пожалуйста, введите корректный номер.", ct);
+                }
+            }
+            else
+            {
+                await botClient.SendMessage(update.Message.Chat, "Список пуст.", ct);
+            }
+        }
+
+        private async Task CompleteTask(ITelegramBotClient botClient, Update update, string[] splitInput, ToDoUser? user, CancellationToken ct)
+        {
+            if (user != null)
+            {
+                var idToFind = string.Join(' ', splitInput[1..]);
+                Validator.ValidateString(idToFind);
+                if (Guid.TryParse(idToFind, out Guid idSearch))
+                {
+                    await _toDoService.MarkCompleted(idSearch, ct);
+                    await botClient.SendMessage(update.Message.Chat, "Задача завершена.", ct);
+                }
+            }
+        }
+
+        private void InfoMethod(ITelegramBotClient botClient, Chat chat, User user, CancellationToken ct)
         {
             botClient.SendMessage(chat,
                 $"{((user == null)
                 ? "В"
-                : $"{user.Username}, в")}ерсия и дата создания: {Program.ProgrammVersionInfo}"
+                : $"{user.Username}, в")}ерсия и дата создания: {Program.ProgrammVersionInfo}",
+                ct
                 );
         }
 
-        private void HelpMethod(ITelegramBotClient botClient, Chat chat, User user)
+        private void HelpMethod(ITelegramBotClient botClient, Chat chat, User user, CancellationToken ct)
         {
             botClient.SendMessage(chat,
                 $"{((user != null)
@@ -263,7 +277,40 @@ namespace Homework2
                 $"\nкоманда /removetask позволяет удалить определенную задачу," +
                 $"\nкоманда /report позволяет узнать статистику по задачам," +
                 $"\nкоманда /find позволяет найти все задачи, начинающиеся с введенного слова," +
-                $"\nкоманда /exit позволяет выйти из меню.");
+                $"\nкоманда /exit позволяет выйти из меню.",
+                ct
+                );
+        }
+        private async Task ShowReport(ITelegramBotClient botClient, Update update, ToDoUser user, CancellationToken ct)
+        {
+            var (total, completed, active, generatedAt) = await _toDoReportService.GetUserStats(user.UserId, ct);
+            await botClient.SendMessage(
+                update.Message.Chat,
+                $"Статистика по задачам на {generatedAt}. " +
+                $"Всего: {total}; Завершенных: {completed}; " +
+                $"Активных: {active};",
+                ct
+            );
+        }
+        private async Task ShowAllTasks(ITelegramBotClient botClient, Update update, ToDoUser user, CancellationToken ct)
+        {
+            var tasks = await _toDoService.GetAllByUserId(user.UserId, ct);
+            string message = "Задач нет.";
+            if (tasks.Count > 0)
+            {
+                var sb = new StringBuilder();
+                foreach (var task in tasks)
+                {
+                    sb.AppendFormat("({0}) {1} - {2} - {3}\n", task.State, task.Name, task.CreatedAt, task.Id);
+                }
+                message = sb.ToString();
+            }
+            await botClient.SendMessage(update.Message.Chat, message, ct);
+        }
+        public Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken ct)
+        {
+            Console.WriteLine($"HandleError: {exception})");
+            return Task.CompletedTask;
         }
     }
 }
