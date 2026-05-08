@@ -1,6 +1,7 @@
 ﻿using Otus.ToDoList.ConsoleBot;
 using Otus.ToDoList.ConsoleBot.Types;
 using System;
+using System.Runtime.ConstrainedExecution;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,11 +28,25 @@ namespace Homework2
             try
             {
                 var splitInput = update.Message.Text?.Split(' ');
-                var user = await _userService.GetUser(update.Message.From.Id, ct);
+                ToDoUser user;
+                try
+                {
+                    user = await _userService.GetUser(update.Message.From.Id, ct);
+                   
+                }
+                catch (Exception e)
+                {
+                    user = null;
+                }
                 if (user == null && splitInput[0] != "/start")
                 {
-                    await botClient.SendMessage(update.Message.Chat, "Вы не зарегистрированы, Вам доступны команды /help, /info и /start для регистрации.", ct);
+                    await botClient.SendMessage(update.Message.Chat,
+                        "Вы не зарегистрированы, " +
+                        "Вам доступны команды /help, /info и /start для регистрации.",
+                        ct);
+                    return;
                 }
+
 
                 /*//string taskLength = string.Empty;
                 //if (taskCountLimit == 0)

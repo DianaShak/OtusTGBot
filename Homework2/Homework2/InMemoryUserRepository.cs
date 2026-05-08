@@ -19,17 +19,14 @@ namespace Homework2
             return;
         }
 
-        public async Task<ToDoUser?> GetUser(Guid userId, CancellationToken ct)
+        public async Task<ToDoUser> GetUser(Guid userId, CancellationToken ct)
         {
-            var foundUser = _userRepo.FirstOrDefault(item => item.UserId == userId);
-            return foundUser;
+            return _userRepo.First(item => item.UserId == userId);
         }
 
-        public async Task<ToDoUser?> GetUserByTelegramUserId(long telegramUserId, CancellationToken ct)
+        public async Task<ToDoUser> GetUserByTelegramUserId(long telegramUserId, CancellationToken ct)
         {
-            var foundUser = _userRepo.FirstOrDefault(item => item.TelegramUserId == telegramUserId);
-            return foundUser;
-
+            return _userRepo.First(item => item.TelegramUserId == telegramUserId);
         }
     }
 }

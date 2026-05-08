@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Homework2
@@ -12,16 +13,15 @@ namespace Homework2
             _userRepository = userRepository;
         }
 
-        public async Task<ToDoUser?> GetUser(long telegramUserId, CancellationToken ct)
+        public async Task<ToDoUser> GetUser(long telegramUserId, CancellationToken ct)
         {
-            var foundedUser = _userRepository.GetUserByTelegramUserId(telegramUserId);
-            return foundedUser;
+            return await _userRepository.GetUserByTelegramUserId(telegramUserId, ct);
         }
 
         public async Task<ToDoUser> RegisterUser(long telegramUserId, string telegramUserName, CancellationToken ct)
         {
             ToDoUser user = new(telegramUserName, telegramUserId);
-            _userRepository.Add(user);
+            await _userRepository.Add(user, ct);
             return user;
         }
     }

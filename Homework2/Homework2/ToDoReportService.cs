@@ -11,7 +11,7 @@ namespace Homework2
     {
         private readonly IToDoRepository _toDoRepository;
         private readonly IUserRepository _userRepository;
-        public ToDoReportService(IToDoRepository toDoRepository, IUserRepository userRepository, CancellationToken ct)
+        public ToDoReportService(IToDoRepository toDoRepository, IUserRepository userRepository, CancellationTokenSource ct)
         {
             _toDoRepository = toDoRepository;
             _userRepository = userRepository;
