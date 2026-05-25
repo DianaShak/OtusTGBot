@@ -70,8 +70,13 @@ namespace Homework2
         {
             try
             {
+                if (update.Message?.Text == null)
+                {
+                    return;
+                }
                 var splitInput = update.Message.Text?.Split(' ');
                 ToDoUser user;
+
                 try
                 {
                     user = await _userService.GetUser(update.Message.From.Id, ct);
@@ -80,6 +85,7 @@ namespace Homework2
                 catch (Exception e)
                 {
                     user = null;
+                    await botClient.SendMessage(update.Message.Chat, $"Исключение: {e.Message}");
                     await botClient.SetMyCommands(unregisteredCommands);
                 }
                 /*//string taskLength = string.Empty;
