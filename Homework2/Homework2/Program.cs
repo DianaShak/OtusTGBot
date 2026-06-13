@@ -25,8 +25,8 @@ namespace Homework2
             {
                 CancellationTokenSource cts = new CancellationTokenSource();
                 
-                var toDoRepository = new InMemoryToDoRepository();
-                var userRepository = new InMemoryUserRepository();
+                var toDoRepository = new FileToDoRepository("C:\\Users\\Diana\\Desktop\\botData\\ToDoItems");
+                var userRepository = new FileUserRepository("C:\\Users\\Diana\\Desktop\\botData\\ToDoUsers");
                 var toDoService = new ToDoService(
                     toDoRepository,
                     ToDoService.TaskCountLimitMin,

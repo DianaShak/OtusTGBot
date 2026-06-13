@@ -1,12 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Telegram.Bot.Polling;
 using Telegram.Bot;
+using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
-using System.Collections.Generic;
 
 
 namespace Homework2
@@ -25,6 +26,10 @@ namespace Homework2
         private const string FindCommand = "/find";
         private const string ReportCommand = "/report";
         private const string ExitCommand = "/exit";
+        private static readonly HashSet<string> _unregisteredCommands = new HashSet<string> 
+        { StartCommand, HelpCommand, InfoCommand };
+        private static readonly HashSet<string> _registeredCommands = new HashSet<string>
+        { AddTaskCommand, ShowTasksCommand, ShowAllTaskCommand, FindCommand, ReportCommand, ExitCommand };
 
         private readonly List<BotCommand> commands = new()
                 {
@@ -41,7 +46,7 @@ namespace Homework2
         private readonly List<BotCommand> unregisteredCommands = new()
                 {
                     new BotCommand { Command = "/start", Description = "Регистрация"},
-                    new BotCommand { Command = "/info", Description = "Cписок задач со статусом Active"},
+                    new BotCommand { Command = "/info", Description = "Информация о версии и дате создания"},
                     new BotCommand { Command = "/help", Description = "Справочная информация о коммандах"},
                 };
         private readonly ReplyKeyboardMarkup MainKeyboard = new(
@@ -85,9 +90,21 @@ namespace Homework2
                 catch (Exception e)
                 {
                     user = null;
-                    await botClient.SendMessage(update.Message.Chat, $"Исключение: {e.Message}");
-                    await botClient.SetMyCommands(unregisteredCommands);
-                }
+                    if (_registeredCommands.Contains(splitInput[0]))
+                    {
+                        await botClient.SendMessage(update.Message.Chat,
+                            "Вы не зарегистрированы, Вам доступна команда /start для регистрации.",
+                            replyMarkup: StartKeyboard);
+                        await botClient.SetMyCommands(unregisteredCommands);
+                        return;
+                    }
+                    else if (!_unregisteredCommands.Contains(splitInput[0]))
+                    {
+                        await botClient.SendMessage(update.Message.Chat, "Команда не существует.");
+                        await botClient.SetMyCommands(unregisteredCommands);
+                        return;
+                    }
+                }        
                 /*//string taskLength = string.Empty;
                 //if (taskCountLimit == 0)
                 //{
@@ -113,13 +130,13 @@ namespace Homework2
                     return;
                 }
 
-                if (user == null && splitInput[0] != StartCommand && splitInput[0] != HelpCommand && splitInput[0] != InfoCommand)
-                {
-                    await botClient.SendMessage(update.Message.Chat,
-                                    "Вы не зарегистрированы, " +
-                                    "Вам доступна команда /start для регистрации.", replyMarkup: StartKeyboard);
-                    return;
-                }
+                //if (user == null && splitInput[0] != StartCommand && splitInput[0] != HelpCommand && splitInput[0] != InfoCommand)
+                //{
+                //    await botClient.SendMessage(update.Message.Chat,
+                //                    "Вы не зарегистрированы, " +
+                //                    "Вам доступна команда /start для регистрации.", replyMarkup: StartKeyboard);
+                //    return;
+                //}
 
                 switch (splitInput[0])
                 {

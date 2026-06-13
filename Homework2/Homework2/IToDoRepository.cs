@@ -14,7 +14,7 @@ namespace Homework2
 
         Task<IReadOnlyList<ToDoItem>> Find(Guid userId, Func<ToDoItem, bool> predicate, CancellationToken ct);
 
-        Task<ToDoItem?> Get(Guid id, CancellationToken ct);
+        Task<ToDoItem> Get(Guid id, CancellationToken ct);
 
         Task Add(ToDoItem item, CancellationToken ct);
 
