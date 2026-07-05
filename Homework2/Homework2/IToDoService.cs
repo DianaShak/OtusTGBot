@@ -15,7 +15,7 @@ namespace Homework2
 
         Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix, CancellationToken ct);
 
-        Task<ToDoItem> Add(ToDoUser user, string name, CancellationToken ct);
+        Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, CancellationToken ct);
         Task MarkCompleted(Guid taskId, CancellationToken ct);
         Task Delete(Guid taskId, CancellationToken ct);
     }

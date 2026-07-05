@@ -28,7 +28,7 @@ namespace Homework2
             _taskLengthLimitMax = taskLengthLimitMax;
         }
 
-        public async Task<ToDoItem> Add(ToDoUser user, string name, CancellationToken ct)
+        public async Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, CancellationToken ct)
         {
             if (await _toDoRepository.ExistsByName(user.UserId, name, ct))
             {
@@ -47,7 +47,7 @@ namespace Homework2
                 throw new TaskLengthLimitException(name.Length, _taskLengthLimitMin);
             }
 
-            ToDoItem newAddItem = new(user, name);
+            ToDoItem newAddItem = new(user, name, deadline);
             await _toDoRepository.Add(newAddItem, ct);
             return newAddItem;
         }

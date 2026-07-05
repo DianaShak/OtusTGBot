@@ -1,9 +1,11 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Xsl;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -26,7 +28,7 @@ namespace Homework2
         private const string FindCommand = "/find";
         private const string ReportCommand = "/report";
         private const string ExitCommand = "/exit";
-        private static readonly HashSet<string> _unregisteredCommands = new HashSet<string> 
+        private static readonly HashSet<string> _unregisteredCommands = new HashSet<string>
         { StartCommand, HelpCommand, InfoCommand };
         private static readonly HashSet<string> _registeredCommands = new HashSet<string>
         { AddTaskCommand, ShowTasksCommand, ShowAllTaskCommand, FindCommand, ReportCommand, ExitCommand };
@@ -50,10 +52,11 @@ namespace Homework2
                     new BotCommand { Command = "/help", Description = "Справочная информация о коммандах"},
                 };
         private readonly ReplyKeyboardMarkup MainKeyboard = new(
-                new KeyboardButton[] { "/showalltasks", "/showtasks", "/report" })
+                new KeyboardButton[] { "/showalltasks", "/showtasks", "/addtask", "/report" })
         {
             ResizeKeyboard = true
         };
+
         private readonly ReplyKeyboardMarkup StartKeyboard = new(
                 new KeyboardButton[] { "/start" })
         {
@@ -63,12 +66,16 @@ namespace Homework2
         private readonly IUserService _userService;
         private readonly IToDoService _toDoService;
         private readonly IToDoReportService _toDoReportService;
+        private readonly IEnumerable<IScenario> _scenarios;
+        private readonly IScenarioContextRepository _contextRepository;
 
-        public UpdateHandler(IUserService userService, IToDoService toDoService, IToDoReportService toDoReportService)
+        public UpdateHandler(IUserService userService, IToDoService toDoService, IToDoReportService toDoReportService, IEnumerable<IScenario> scenarios, IScenarioContextRepository contextRepository)
         {
             _userService = userService;
             _toDoService = toDoService;
             _toDoReportService = toDoReportService;
+            _scenarios = scenarios;
+            _contextRepository = contextRepository;
         }
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken ct)
@@ -104,7 +111,7 @@ namespace Homework2
                         await botClient.SetMyCommands(unregisteredCommands);
                         return;
                     }
-                }        
+                }
                 /*//string taskLength = string.Empty;
                 //if (taskCountLimit == 0)
                 //{
@@ -121,6 +128,23 @@ namespace Homework2
                 //    taskLengthLimit = ParseAndValidateInt(taskLength);
                 //    botClient.SendMessage(update.Message.Chat, $"Максимальная длина задачи: {taskLengthLimit}");
                 //}*/
+
+                if (splitInput[0] == "/cancel")
+                {
+                    botClient.SendMessage(update.Message.Chat.Id, "Выберите команду:", replyMarkup: MainKeyboard);
+                    _contextRepository.ResetContext(update.Message.From.Id, ct);
+                }
+
+                if (user != null)
+                {
+                    ScenarioContext? context = await _contextRepository.GetContext(user.TelegramUserId, ct);
+
+                    if (context != null && context.CurrentScenario != ScenarioType.None)
+                    {
+                        await ProcessScenario(botClient, context, update, ct);
+                        return;
+                    }
+                }
 
                 if (splitInput == null || splitInput.Length < 1)
                 {
@@ -242,9 +266,13 @@ namespace Homework2
 
         private async Task AddTask(ITelegramBotClient botClient, Update update, string[] splitInput, ToDoUser? user, CancellationToken ct)
         {
-            var taskToAdd = string.Join(' ', splitInput[1..]);
-            await _toDoService.Add(user, taskToAdd, ct);
-            await botClient.SendMessage(update.Message.Chat, $"Задача '{taskToAdd}' добавлена.", replyMarkup: MainKeyboard);
+            var newContext = new ScenarioContext(ScenarioType.Addtask);
+
+            await ProcessScenario(botClient, newContext, update, ct);
+
+            //var taskToAdd = string.Join(' ', splitInput[1..]);
+            //await _toDoService.Add(user, taskToAdd, ct);
+            //await botClient.SendMessage(update.Message.Chat, $"Задача '{taskToAdd}' добавлена.", replyMarkup: MainKeyboard);
         }
 
         private async Task ShowTasks(ITelegramBotClient botClient, Update update, ToDoUser? user, CancellationToken ct)
@@ -332,6 +360,7 @@ namespace Homework2
                 $"\nкоманда /showalltasks выводит список всех введенных задач, " +
                 $"\nкоманда /removetask позволяет удалить определенную задачу," +
                 $"\nкоманда /report позволяет узнать статистику по задачам," +
+                $"\nкоманда /cancel позволяет отменить текущий суенарий добавления задачи," +
                 $"\nкоманда /find позволяет найти все задачи, начинающиеся с введенного слова.",
                 replyMarkup: keyboard);
         }
@@ -368,6 +397,35 @@ namespace Homework2
         {
             Console.WriteLine($"HandleError: {exception})");
             return Task.CompletedTask;
+        }
+
+        private IScenario GetScenario(ScenarioType scenario)
+        {
+            return _scenarios.First(x => x.CanHandle(scenario));
+        }
+
+        private async Task ProcessScenario(ITelegramBotClient botClient, ScenarioContext context, Update update, CancellationToken ct)
+        {
+            IScenario getScenario;
+            try
+            {
+                getScenario = GetScenario(context.CurrentScenario);
+            }
+            catch (Exception ex)
+            {
+                botClient.SendMessage(update.Message.Chat.Id, $"Исключение: {ex.Message}");
+                return;
+            }
+
+            var scenarioResult = await getScenario.HandleMessageAsync(botClient, context, update, ct);
+            if (scenarioResult == ScenarioResult.Completed)
+            {
+                await _contextRepository.ResetContext(update.Message.From.Id, ct);
+            }
+            else
+            {
+                await _contextRepository.SetContext(update.Message.From.Id, context, ct);
+            }
         }
     }
 }

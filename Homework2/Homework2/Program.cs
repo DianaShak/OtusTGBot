@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -36,7 +37,10 @@ namespace Homework2
                     );
                 var toDoReportService = new ToDoReportService(toDoRepository, userRepository, cts);
                 var userService = new UserService(userRepository);
-                var handler = new UpdateHandler(userService, toDoService, toDoReportService);
+                var scenario = new AddTaskScenario(userService, toDoService);
+                var scenarioList =new List<IScenario> { scenario };
+                var contextRepository = new InMemoryScenarioContextRepository();
+                var handler = new UpdateHandler(userService, toDoService, toDoReportService, scenarioList, contextRepository);
                 var botClient = new TelegramBotClient(token);
                 var receiverOptions = new ReceiverOptions
                 {
