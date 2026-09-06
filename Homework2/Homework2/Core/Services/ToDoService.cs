@@ -1,9 +1,13 @@
-﻿using System;
+﻿using Homework2.Core.DataAcsess;
+using Homework2.Core.Entities;
+using Homework2.Core.Exceptions;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Homework2
+namespace Homework2.Core.Services
 {
     internal class ToDoService : IToDoService
     {
@@ -28,7 +32,7 @@ namespace Homework2
             _taskLengthLimitMax = taskLengthLimitMax;
         }
 
-        public async Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, CancellationToken ct)
+        public async Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, ToDoList? list, CancellationToken ct)
         {
             if (await _toDoRepository.ExistsByName(user.UserId, name, ct))
             {
@@ -47,7 +51,7 @@ namespace Homework2
                 throw new TaskLengthLimitException(name.Length, _taskLengthLimitMin);
             }
 
-            ToDoItem newAddItem = new(user, name, deadline);
+            ToDoItem newAddItem = new(user, name, deadline, list);
             await _toDoRepository.Add(newAddItem, ct);
             return newAddItem;
         }
@@ -73,6 +77,26 @@ namespace Homework2
         public async Task<IReadOnlyList<ToDoItem>> GetAllByUserId(Guid userId, CancellationToken ct)
         {
             var list = await _toDoRepository.GetAllByUserId(userId, ct);
+            return list;
+        }
+
+        public async Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct)
+        {
+            var allUserTasks = await _toDoRepository.GetAllByUserId(userId, ct);
+            if (allUserTasks.Count == 0)
+            {
+                throw new ArgumentException("У Вас пока нет записанных задач.");
+            }
+
+            List<ToDoItem> list = new List<ToDoItem>();
+
+            foreach (var task in allUserTasks) 
+            {
+                if (task.List.Id == listId)
+                {
+                    list.Add(task);
+                }
+            }
             return list;
         }
 

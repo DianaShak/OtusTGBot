@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Homework2
+namespace Homework2.Core.Entities
 {
     public enum ToDoItemState { Active, Completed }
     public class ToDoItem
@@ -23,7 +23,9 @@ namespace Homework2
 
         public DateTime Deadline {  get; set; }
 
-        public ToDoItem(ToDoUser user, string name, DateTime deadline)
+        public ToDoList? List { get; set; }
+
+        public ToDoItem(ToDoUser user, string name, DateTime deadline, ToDoList? list)
         {
             User = user;
             Name = name;
@@ -31,6 +33,7 @@ namespace Homework2
             CreatedAt = DateTime.UtcNow;
             State = ToDoItemState.Active;
             Deadline = deadline;
+            List = list;
         }
     }
 }

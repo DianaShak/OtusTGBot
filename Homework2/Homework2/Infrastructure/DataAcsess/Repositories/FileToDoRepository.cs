@@ -1,24 +1,30 @@
-﻿using System;
+﻿using Homework2.Core.DataAcsess;
+using Homework2.Core.Entities;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Telegram.Bot.Types;
 
-namespace Homework2
+namespace Homework2.Infrastructure.DataAcsess.Repositories
 {
     internal class FileToDoRepository : IToDoRepository
     {
         private const string IndexFileName = "index.json";
-
+        //private const string IndexFileListTask = "index.json";
         private readonly string _baseDir;
         private readonly string _indexFile;
+        //private readonly string _indexFileListTask;
 
         public FileToDoRepository(string baseDirPath) 
         {
             _baseDir = baseDirPath;
             _indexFile = Path.Combine(_baseDir, IndexFileName);
+            //_indexFileListTask = Path.Combine(_baseDir, IndexFileListTask);
+
             if (!Directory.Exists(baseDirPath))
             {
                 Directory.CreateDirectory(baseDirPath);
@@ -36,14 +42,16 @@ namespace Homework2
         public async Task Add(ToDoItem item, CancellationToken ct)
         {
             var fileName = $"{item.Id}.json";
-            //await File.WriteAllTextAsync(Path.Combine(_baseDir, fileName), jsonItem);
-            var userDir = Path.Combine(_baseDir, item.User.UserId.ToString());  //  Формируем путь к персональной папке
+
+            var userDir = Path.Combine(_baseDir, item.User.UserId.ToString());  //  Формируем путь к списку
             Directory.CreateDirectory(userDir);  //  Создаем папку пользователя
             var filePath = Path.Combine(userDir, fileName);  //  Путь к файлу задачи
             var indexFile = await LoadIndex(_indexFile);
             indexFile[item.Id] = item.User.UserId;  //  Записываем в индекс-файл задачу
+
             var jsonIndex = JsonSerializer.Serialize(indexFile);
             var jsonItem = JsonSerializer.Serialize(item);
+
             await File.WriteAllTextAsync(filePath, jsonItem);
             await File.WriteAllTextAsync(_indexFile, jsonIndex);
         }
@@ -55,12 +63,13 @@ namespace Homework2
 
             foreach (var file in fileNames)
             {
-                //var json = await File.ReadAllTextAsync(file, ct);
-                using var jsonStream = File.OpenRead(file);
-                var item = await JsonSerializer.DeserializeAsync<ToDoItem>(jsonStream)!;
-                if (item.State == ToDoItemState.Active)
+                using (var jsonStream = File.OpenRead(file))
                 {
-                    countActive++;
+                    var item = await JsonSerializer.DeserializeAsync<ToDoItem>(jsonStream)!;
+                    if (item.State == ToDoItemState.Active)
+                    {
+                        countActive++;
+                    }
                 }
             }
             return countActive;
@@ -69,13 +78,15 @@ namespace Homework2
         public async Task Delete(Guid id, CancellationToken ct)
         {
             var dictionary = await LoadIndex(_indexFile);  //  Получаем десериализованный словарь
-            dictionary.TryGetValue(id, out Guid userId);  //  Находим user id по id задачи
+            if (!dictionary.TryGetValue(id, out Guid userId))  //  Находим user id по id задачи
+            {
+                throw new Exception($"Задача {id} не найдена.");
+            }
+
             var filePath = Path.Combine(_baseDir, userId.ToString(), id.ToString());
             File.Delete(filePath);  //  удаляем файл задачи
             dictionary.Remove(id);  //  удаляем задачу из индекс-файла
             SaveIndex(dictionary);
-
-            //throw new Exception($"Задача {id} не найдена.");
         }
 
         public async Task<bool> ExistsByName(Guid userId, string name, CancellationToken ct)
@@ -84,7 +95,6 @@ namespace Homework2
 
             foreach (var file in fileNames)
             {
-                //var json = await File.ReadAllTextAsync(file, ct);
                 using var jsonStream = File.OpenRead(file);
                 var item = await JsonSerializer.DeserializeAsync<ToDoItem>(jsonStream)!;
                 if (item.Name == name && item.User.UserId == userId)
@@ -122,9 +132,6 @@ namespace Homework2
 
             if (File.Exists(fullFilePath))
             {
-                //using var reader = new StreamReader(fullFilePath);
-                //var json2 = await reader.ReadToEndAsync();
-                //var json = await File.ReadAllTextAsync(fullFilePath, ct);
                 using var jsonStream = File.OpenRead(fullFilePath);
                 var item = await JsonSerializer.DeserializeAsync<ToDoItem>(jsonStream);
                 return item;
@@ -145,12 +152,6 @@ namespace Homework2
 
         public async Task Update(ToDoItem item, CancellationToken ct)
         {
-            //var foundItem = await Get(item.Id, ct);
-            //foundItem.State = item.State;
-            //foundItem.User = item.User;
-            //foundItem.StateChangedAt = item.StateChangedAt;
-            //foundItem.CreatedAt = item.CreatedAt;
-            //foundItem.Name = item.Name;
             await Add(item, ct);
         }
         

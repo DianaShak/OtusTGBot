@@ -1,9 +1,10 @@
-﻿using System;
+﻿using Homework2.Core.Entities;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Homework2
+namespace Homework2.Core.DataAcsess
 {
     interface IToDoRepository
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Homework2
+namespace Homework2.Core.Exceptions
 {
     public class TaskCountLimitException : Exception
     {
@@ -8,15 +8,7 @@ namespace Homework2
             : base($"Превышено максимальное количество задач равное {taskCountLimit}")
         {
         }
-
-        //public TaskCountLimitException()
-        //{
-        //}
-
-        //public TaskCountLimitException(string message, Exception inner)
-        //    : base(message, inner)
-        //{
-        //}
     }
 }
+
 

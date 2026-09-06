@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Homework2.Core.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -32,28 +33,18 @@ namespace Homework2
 
         public bool CanHandle(ScenarioType scenario)
         {
-            return scenario == ScenarioType.Addtask;
+            return scenario == ScenarioType.AddTask;
         }
 
         public async Task<ScenarioResult> HandleMessageAsync(ITelegramBotClient bot, ScenarioContext context, Update update, CancellationToken ct)
         {
-            //        Добавить обработку шагов сценария(ScenarioContext.CurrentStep) через switch case
-            //case null
-            //Получить ToDoUser и сохранить его в ScenarioContext.Data.
-            //Отправить пользователю сообщение "Введите название задачи:"
-            //Обновить ScenarioContext.CurrentStep на "Name"
-            //Вернуть ScenarioResult.Transition
-            //case "Name"
-            //Вызвать IToDoService.Add.Передать ToDoUser из ScenarioContext.Data и name из сообщения
-            //Вернуть ScenarioResult.Completed
-            //Добавить заполнение Deadline в AddTaskScenario через отдельный шаг. Формат текста dd.MM.yyyy.
-            //Если пользователь введет дату в неверном формате, сценарий не должен прерваться и нужно еще раз запросить дату.
+            var messageText = update.Message?.Text;
+            var userId = update.Message!.From!.Id;
+            var user = await _userService.GetUser(userId, ct);
+            var guidUserId = user.UserId;
             switch (context.CurrentStep)
             {
                 case null:
-                    var userId = update.Message.From.Id;
-                    var user = await _userService.GetUser(userId, ct);
-
                     context.Data[User] = user;
 
                     await bot.SendMessage(update.Message.Chat.Id, "Введите название задачи:", replyMarkup: CancelKeyboard);
@@ -62,7 +53,7 @@ namespace Homework2
 
                     return ScenarioResult.Transition;
                 case "Name":
-                    context.TemporaryTaskName = update.Message.Text;
+                    context.TemporaryTaskName = update.Message!.Text;
 
                     await bot.SendMessage(update.Message.Chat.Id, "Введите дедлайн задачи в формате дд.мм.гггг (например, 25.05.2027): ", replyMarkup: CancelKeyboard);
 
@@ -70,7 +61,7 @@ namespace Homework2
 
                     return ScenarioResult.Transition;
                 case "Deadline":
-                    var deadlineFromMessage = update.Message.Text;
+                    var deadlineFromMessage = update.Message!.Text;
 
                     if (DateTime.TryParseExact(deadlineFromMessage, DateFormat, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out DateTime deadline))
                     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Homework2
+namespace Homework2.Core.Exceptions
 {
     public class TaskLengthLimitException : Exception
     {

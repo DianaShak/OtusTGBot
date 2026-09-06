@@ -1,8 +1,9 @@
-﻿using System;
+﻿using Homework2.Core.Entities;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Homework2
+namespace Homework2.Core.Services
 {
     public class UserService : IUserService
     {
