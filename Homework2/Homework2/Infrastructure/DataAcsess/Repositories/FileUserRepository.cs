@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Homework2.Core.Entities;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot.Types;
 
-namespace Homework2
+namespace Homework2.Infrastructure.DataAcsess.Repositories
 {
     internal class FileUserRepository : IUserRepository
     {
@@ -62,7 +63,6 @@ namespace Homework2
             }
 
             throw new Exception($"Пользователь {telegramUserId} не найден.");
-            //return _userRepo.First(item => item.TelegramUserId == telegramUserId);
         }
     }
 }

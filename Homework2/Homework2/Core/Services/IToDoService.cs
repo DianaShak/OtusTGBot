@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Homework2.Core.Entities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,8 +16,9 @@ namespace Homework2
 
         Task<IReadOnlyList<ToDoItem>> Find(ToDoUser user, string namePrefix, CancellationToken ct);
 
-        Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, CancellationToken ct);
+        Task<ToDoItem> Add(ToDoUser user, string name, DateTime deadline, ToDoList? list, CancellationToken ct);
         Task MarkCompleted(Guid taskId, CancellationToken ct);
         Task Delete(Guid taskId, CancellationToken ct);
+        Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct);
     }
 }

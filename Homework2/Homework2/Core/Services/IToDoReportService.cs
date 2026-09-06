@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Homework2
+namespace Homework2.Core.Services
 {
     public interface IToDoReportService
     {

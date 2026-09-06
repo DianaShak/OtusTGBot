@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Homework2.Core.Services;
+using Homework2.Infrastructure.DataAcsess.Repositories;
+using Homework2.TelegramBot;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,13 +41,14 @@ namespace Homework2
                 var toDoReportService = new ToDoReportService(toDoRepository, userRepository, cts);
                 var userService = new UserService(userRepository);
                 var scenario = new AddTaskScenario(userService, toDoService);
+                var toDoListservice = new ToDoListService();
                 var scenarioList =new List<IScenario> { scenario };
                 var contextRepository = new InMemoryScenarioContextRepository();
-                var handler = new UpdateHandler(userService, toDoService, toDoReportService, scenarioList, contextRepository);
+                var handler = new UpdateHandler(userService, toDoService, toDoListservice, toDoReportService, scenarioList, contextRepository);
                 var botClient = new TelegramBotClient(token);
                 var receiverOptions = new ReceiverOptions
                 {
-                    AllowedUpdates = [UpdateType.Message],
+                    AllowedUpdates = [UpdateType.Message, UpdateType.CallbackQuery],
                     DropPendingUpdates = true
                 };
                 botClient.StartReceiving(handler, receiverOptions);
