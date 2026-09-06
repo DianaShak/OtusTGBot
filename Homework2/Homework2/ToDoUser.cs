@@ -15,10 +15,10 @@ namespace Homework2
 
         public ToDoUser(string telegramUserName, long telegramUserId)
         {
-            telegramUserName = TelegramUserName;
+            TelegramUserName = telegramUserName;
             RegisteredAt = DateTime.UtcNow;
             UserId = Guid.NewGuid();
-            telegramUserId = TelegramUserId;
+            TelegramUserId = telegramUserId;
         }
     }
 }
